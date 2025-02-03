@@ -1,0 +1,59 @@
+---
+title: "Introduction to lightAUC"
+author: "Christos Adam"
+output:
+  rmarkdown::html_vignette:
+    number_sections: false
+  word_document: default
+  pdf_document: default
+fontsize: 11pt
+urlcolor: blue
+linkcolor: blue
+link-citations: true
+header-includes: \usepackage{float}
+vignette: >
+  %\VignetteIndexEntry{Introduction to lightAUC}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
+```
+
+# **Fast AUC computation in R**
+
+Fast and lightweight computation of AUC metric for the binary case (1 positive
+and 0 negative) is offered by <b>lightAUC</b> package. The algorithm used is a
+fast implementation from algorithm of Fawcett ([2006](#ref-fawcett2006)).
+
+## **Example**
+
+```r
+# Create some data
+probs   <- c(1, 0.4, 0.8)
+actuals <- c(0, 0, 1)
+lightAUC(probs, actuals)
+```
+```
+## 0.5
+```
+
+For parallel calculations use:
+```r
+# E.g. 2 cores (you can use cores = parallel::detectCores() for your case)
+probs   <- c(1, 0.4, 0.8)
+actuals <- c(0, 0, 1)
+lightAUC(probs, actuals, parallel = TRUE, cores = 2)
+```
+```
+## 0.5
+```
+
+## **References**
+
+<span class="nocase" id="ref-fawcett2006">
+Fawcett, T. (2006). An introduction to ROC analysis. <emph>{Pattern Recognition
+Letters</emph>, \bold{27}(8), 861–874.
+<a href=
+"https://doi.org/10.1016/j.patrec.2005.10.010">10.1016/j.patrec.2005.10.010</a>
