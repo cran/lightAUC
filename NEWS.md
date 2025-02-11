@@ -1,3 +1,9 @@
+# lightAUC 0.1.2
+
+## Major changes
+
+- Faster version of `lightAUC` function for the serial case.
+
 # lightAUC 0.1.1
 
 ## Major changes

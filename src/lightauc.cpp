@@ -7,56 +7,127 @@
 
 // Serial case
 
+// double fast_auc_code(const arma::vec& probs, SEXP actualSEXP) {
+//   
+//   std::size_t n_size = probs.n_elem;
+//   arma::vec r(n_size);
+//   arma::uvec w = arma::sort_index(probs);
+//   double s1 = 0.0;
+//   std::size_t n1 = 0;
+//   
+//   for (std::size_t i = 0, n; i < n_size; i += n) {
+//     n = 1;
+//     while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) ++n;
+//     double i_p_np1_half = i + (n + 1) * 0.5;
+//     for (std::size_t k = 0; k < n; ++k) {
+//       r[w[i + k]] = i_p_np1_half; // average rank of n tied values
+//     }
+//   }
+//   
+//   // Check the type of actual and dispatch accordingly
+//   if (Rf_isInteger(actualSEXP)) {
+//     Rcpp::IntegerVector actual(actualSEXP);
+//     for (std::size_t i = 0; i < n_size; ++i) {
+//       if (actual[i]) {
+//         s1 += r[i];
+//         ++n1;
+//       }
+//     }
+//   } else if (Rf_isLogical(actualSEXP)) {
+//     Rcpp::LogicalVector actual(actualSEXP);
+//     for (std::size_t i = 0; i < n_size; ++i) {
+//       if (actual[i]) {
+//         s1 += r[i];
+//         ++n1;
+//       }
+//     }
+//   } else if (Rf_isNumeric(actualSEXP)) {
+//     Rcpp::NumericVector actual(actualSEXP);
+//     for (std::size_t i = 0; i < n_size; ++i) {
+//       if (actual[i]) {
+//         s1 += r[i];
+//         ++n1;
+//       }
+//     }
+//   } else {
+//     Rcpp::stop("Unsupported type for 'actual'.");
+//     return NA_REAL; // In case of unsupported type
+//   }
+//   
+//   return (s1 - n1 * (n1 + 1) * 0.5) / (n1 * (n_size - n1));
+//   
+// }
+
+// New faster serial version with less loops
+
 double fast_auc_code(const arma::vec& probs, SEXP actualSEXP) {
   
   std::size_t n_size = probs.n_elem;
-  arma::vec r(n_size);
+  // arma::vec r(n_size);
   arma::uvec w = arma::sort_index(probs);
   double s1 = 0.0;
-  std::size_t n1 = 0;
+  std::size_t n1 = 0, actual_count;
   
-  for (std::size_t i = 0, n; i < n_size; i += n) {
-    n = 1;
-    while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) ++n;
-    double i_p_np1_half = i + (n + 1) * 0.5;
-    for (std::size_t k = 0; k < n; ++k) {
-      r[w[i + k]] = i_p_np1_half; // average rank of n tied values
-    }
-  }
-  
-  // Check the type of actual and dispatch accordingly
   if (Rf_isInteger(actualSEXP)) {
     Rcpp::IntegerVector actual(actualSEXP);
-    for (std::size_t i = 0; i < n_size; ++i) {
-      if (actual[i]) {
-        s1 += r[i];
-        ++n1;
+    for (std::size_t i = 0, n; i < n_size; i += n) {
+      n = 1;
+      if (actual[w[i]]) {
+        actual_count = 1;
+      } else {
+        actual_count = 0;
       }
+      while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
+        if (actual[w[i + n]]) {
+          ++actual_count;
+        }
+        ++n;
+      };
+      s1 += (i + (n + 1) * 0.5) * actual_count; // average rank of n tied values
+      n1 += actual_count;
     }
   } else if (Rf_isLogical(actualSEXP)) {
     Rcpp::LogicalVector actual(actualSEXP);
-    for (std::size_t i = 0; i < n_size; ++i) {
-      if (actual[i]) {
-        s1 += r[i];
-        ++n1;
+    for (std::size_t i = 0, n; i < n_size; i += n) {
+      n = 1;
+      if (actual[w[i]]) {
+        actual_count = 1;
+      } else {
+        actual_count = 0;
       }
+      while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
+        if (actual[w[i + n]]) {
+          ++actual_count;
+        }
+        ++n;
+      };
+      s1 += (i + (n + 1) * 0.5) * actual_count; // average rank of n tied values
+      n1 += actual_count;
     }
   } else if (Rf_isNumeric(actualSEXP)) {
     Rcpp::NumericVector actual(actualSEXP);
-    for (std::size_t i = 0; i < n_size; ++i) {
-      if (actual[i]) {
-        s1 += r[i];
-        ++n1;
+    for (std::size_t i = 0, n; i < n_size; i += n) {
+      n = 1;
+      if (actual[w[i]]) {
+        actual_count = 1;
+      } else {
+        actual_count = 0;
       }
+      while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
+        if (actual[w[i + n]]) {
+          ++actual_count;
+        }
+        ++n;
+      };
+      s1 += (i + (n + 1) * 0.5) * actual_count; // average rank of n tied values
+      n1 += actual_count;
     }
   } else {
     Rcpp::stop("Unsupported type for 'actual'.");
     return NA_REAL; // In case of unsupported type
   }
   
-  return (s1 - n1 * (n1 + 1) * 0.5) /\
-    (n1 * (n_size - n1));
-  
+  return (s1 - n1 * (n1 + 1) * 0.5) / (n1 * (n_size - n1));
 }
 
 // Parallel case

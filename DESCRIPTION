@@ -1,7 +1,7 @@
 Package: lightAUC
 Type: Package
 Title: Fast AUC Computation
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(person("Christos", "Adam", role = c("aut", "cre"),
            email = "econp266@econ.soc.uoc.gr",
            comment = c(ORCID = "0009-0003-3244-7034")))
@@ -22,7 +22,7 @@ URL: https://github.com/cadam00/lightAUC,
         https://cadam00.github.io/lightAUC/
 BugReports: https://github.com/cadam00/lightAUC/issues
 NeedsCompilation: yes
-Packaged: 2025-02-03 06:15:31 UTC; Administrator
+Packaged: 2025-02-11 09:36:33 UTC; Administrator
 Author: Christos Adam [aut, cre] (<https://orcid.org/0009-0003-3244-7034>)
 Repository: CRAN
-Date/Publication: 2025-02-03 18:00:01 UTC
+Date/Publication: 2025-02-11 10:00:02 UTC
