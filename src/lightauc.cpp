@@ -60,75 +60,179 @@
 
 // New faster serial version with less loops
 
+// double fast_auc_code(const arma::vec& probs, SEXP actualSEXP) {
+//   
+//   std::size_t n_size = probs.n_elem;
+//   // arma::vec r(n_size);
+//   arma::uvec w = arma::sort_index(probs);
+//   double s1 = 0.0;
+//   std::size_t n1 = 0, actual_count;
+//   
+//   if (Rf_isInteger(actualSEXP)) {
+//     Rcpp::IntegerVector actual(actualSEXP);
+//     for (std::size_t i = 0, n; i < n_size; i += n) {
+//       n = 1;
+//       if (actual[w[i]]) {
+//         actual_count = 1;
+//       } else {
+//         actual_count = 0;
+//       }
+//       while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
+//         if (actual[w[i + n]]) {
+//           ++actual_count;
+//         }
+//         ++n;
+//       };
+//       // average rank of n tied values
+//       s1 += (i + (n + 1) * 0.5) * actual_count;
+//       n1 += actual_count;
+//     }
+//   } else if (Rf_isLogical(actualSEXP)) {
+//     Rcpp::LogicalVector actual(actualSEXP);
+//     for (std::size_t i = 0, n; i < n_size; i += n) {
+//       n = 1;
+//       if (actual[w[i]]) {
+//         actual_count = 1;
+//       } else {
+//         actual_count = 0;
+//       }
+//       while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
+//         if (actual[w[i + n]]) {
+//           ++actual_count;
+//         }
+//         ++n;
+//       };
+//       // average rank of n tied values
+//       s1 += (i + (n + 1) * 0.5) * actual_count;
+//       n1 += actual_count;
+//     }
+//   } else if (Rf_isNumeric(actualSEXP)) {
+//     Rcpp::NumericVector actual(actualSEXP);
+//     for (std::size_t i = 0, n; i < n_size; i += n) {
+//       n = 1;
+//       if (actual[w[i]]) {
+//         actual_count = 1;
+//       } else {
+//         actual_count = 0;
+//       }
+//       while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
+//         if (actual[w[i + n]]) {
+//           ++actual_count;
+//         }
+//         ++n;
+//       };
+//       // average rank of n tied values
+//       s1 += (i + (n + 1) * 0.5) * actual_count;
+//       n1 += actual_count;
+//     }
+//   } else {
+//     Rcpp::stop("Unsupported type for 'actual'.");
+//     return NA_REAL; // In case of unsupported type
+//   }
+//   
+//   return (s1 - n1 * (n1 + 1) * 0.5) / (n1 * (n_size - n1));
+// }
+
 double fast_auc_code(const arma::vec& probs, SEXP actualSEXP) {
-  
   std::size_t n_size = probs.n_elem;
-  // arma::vec r(n_size);
+  // Get sorted indices of the probability vector.
   arma::uvec w = arma::sort_index(probs);
-  double s1 = 0.0;
-  std::size_t n1 = 0, actual_count;
   
+  double s1 = 0.0;
+  std::size_t n1 = 0;
+  
+  // Direct pointer access to the probability vector and the sorted indices.
+  const double* probs_ptr = probs.memptr();
+  const arma::uword* indx_ptr = w.memptr();
+  
+  // Process the code depending on the type of 'actual'
   if (Rf_isInteger(actualSEXP)) {
     Rcpp::IntegerVector actual(actualSEXP);
-    for (std::size_t i = 0, n; i < n_size; i += n) {
-      n = 1;
-      if (actual[w[i]]) {
-        actual_count = 1;
+    const int* actual_ptr = INTEGER(actual);
+    std::size_t i = 0;
+    while (i < n_size) {
+      // Fast path: if we're at the last index or the next probability
+      // is different.
+      if ((i == n_size - 1) ||\
+          (probs_ptr[indx_ptr[i]] != probs_ptr[indx_ptr[i + 1]])) {
+        std::size_t ac = (actual_ptr[indx_ptr[i]] != 0) ? 1 : 0;
+        // For a single (non-tied) element, the rank is (i+1)
+        s1 += (i + 1) * ac;
+        n1 += ac;
+        i++;
       } else {
-        actual_count = 0;
-      }
-      while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
-        if (actual[w[i + n]]) {
-          ++actual_count;
+        // Process a tie group.
+        std::size_t n = 1;
+        std::size_t ac = (actual_ptr[indx_ptr[i]] != 0) ? 1 : 0;
+        double current_prob = probs_ptr[indx_ptr[i]];
+        while (i + n < n_size && probs_ptr[indx_ptr[i + n]] == current_prob) {
+          ac += (actual_ptr[indx_ptr[i + n]] != 0) ? 1 : 0;
+          n++;
         }
-        ++n;
-      };
-      s1 += (i + (n + 1) * 0.5) * actual_count; // average rank of n tied values
-      n1 += actual_count;
+        // Calculate the average rank of the tied group:
+        // average rank = i + (n + 1) * 0.5
+        // (since i is 0-indexed, i+1 is the rank for a single element)
+        s1 += (i + (n + 1) * 0.5) * ac;
+        n1 += ac;
+        i += n;
+      }
     }
   } else if (Rf_isLogical(actualSEXP)) {
     Rcpp::LogicalVector actual(actualSEXP);
-    for (std::size_t i = 0, n; i < n_size; i += n) {
-      n = 1;
-      if (actual[w[i]]) {
-        actual_count = 1;
+    const int* actual_ptr = LOGICAL(actual);
+    std::size_t i = 0;
+    while (i < n_size) {
+      if ((i == n_size - 1) ||\
+          (probs_ptr[indx_ptr[i]] != probs_ptr[indx_ptr[i + 1]])) {
+        std::size_t ac = (actual_ptr[indx_ptr[i]] != 0) ? 1 : 0;
+        s1 += (i + 1) * ac;
+        n1 += ac;
+        i++;
       } else {
-        actual_count = 0;
-      }
-      while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
-        if (actual[w[i + n]]) {
-          ++actual_count;
+        std::size_t n = 1;
+        std::size_t ac = (actual_ptr[indx_ptr[i]] != 0) ? 1 : 0;
+        double current_prob = probs_ptr[indx_ptr[i]];
+        while (i + n < n_size && probs_ptr[indx_ptr[i + n]] == current_prob) {
+          ac += (actual_ptr[indx_ptr[i + n]] != 0) ? 1 : 0;
+          n++;
         }
-        ++n;
-      };
-      s1 += (i + (n + 1) * 0.5) * actual_count; // average rank of n tied values
-      n1 += actual_count;
+        s1 += (i + (n + 1) * 0.5) * ac;
+        n1 += ac;
+        i += n;
+      }
     }
   } else if (Rf_isNumeric(actualSEXP)) {
     Rcpp::NumericVector actual(actualSEXP);
-    for (std::size_t i = 0, n; i < n_size; i += n) {
-      n = 1;
-      if (actual[w[i]]) {
-        actual_count = 1;
+    const double* actual_ptr = REAL(actual);
+    std::size_t i = 0;
+    while (i < n_size) {
+      if ((i == n_size - 1) ||\
+          (probs_ptr[indx_ptr[i]] != probs_ptr[indx_ptr[i + 1]])) {
+        std::size_t ac = (actual_ptr[indx_ptr[i]] != 0) ? 1 : 0;
+        s1 += (i + 1) * ac;
+        n1 += ac;
+        i++;
       } else {
-        actual_count = 0;
-      }
-      while (i + n < n_size && probs[w[i]] == probs[w[i + n]]) {
-        if (actual[w[i + n]]) {
-          ++actual_count;
+        std::size_t n = 1;
+        std::size_t ac = (actual_ptr[indx_ptr[i]] != 0) ? 1 : 0;
+        double current_prob = probs_ptr[indx_ptr[i]];
+        while (i + n < n_size && probs_ptr[indx_ptr[i + n]] == current_prob) {
+          ac += (actual_ptr[indx_ptr[i + n]] != 0) ? 1 : 0;
+          n++;
         }
-        ++n;
-      };
-      s1 += (i + (n + 1) * 0.5) * actual_count; // average rank of n tied values
-      n1 += actual_count;
+        s1 += (i + (n + 1) * 0.5) * ac;
+        n1 += ac;
+        i += n;
+      }
     }
   } else {
     Rcpp::stop("Unsupported type for 'actual'.");
-    return NA_REAL; // In case of unsupported type
   }
   
+  // Final AUC computation: adjust for the minimal possible rank sum.
   return (s1 - n1 * (n1 + 1) * 0.5) / (n1 * (n_size - n1));
 }
+
 
 // Parallel case
 

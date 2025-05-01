@@ -1,10 +1,10 @@
-4cce8d0b2a39df4e468157df41890f4d *DESCRIPTION
+bc6c7029d270b3bf7bd351fe0fd0e027 *DESCRIPTION
 6677f099c5e250e04ea8ee6356b60941 *NAMESPACE
-ebbe5accc501e4fef48be2b834d28e68 *NEWS.md
+4bb8a49a95206de45ab4f88f0de49d16 *NEWS.md
 f2b27f0232ba0d29b20b506c661f4dca *R/RcppExports.R
-6793fd0cb44a5898fb82dd4099850e34 *README.md
-1dda19015f0aa969acee990c150e3ac9 *build/partial.rdb
-996d92ca2940a6551666f49e8971dde8 *build/vignette.rds
+531bfc131f6166d393faf34b1d797fd7 *README.md
+75d0a007992c60d09f764686e9397c0f *build/partial.rdb
+c664582859c1a9f47fbe0a30ab58a944 *build/vignette.rds
 0fd414942ee21b96b62963e66bfdaa3e *inst/doc/Introduction.R
 1808e2f497476fcacfdbd765c494351f *inst/doc/Introduction.Rmd
 20c975a670320a36174f9ee1feb766c9 *inst/doc/Introduction.html
@@ -12,7 +12,7 @@ f2b27f0232ba0d29b20b506c661f4dca *R/RcppExports.R
 80d6221b12e36ab958bec262b2aa6995 *src/Makevars
 809da2f5856b8740a88650aed6c45c86 *src/Makevars.win
 d0e1f7a68af11fea910827099f526e8f *src/RcppExports.cpp
-c473c1e78a4321b5cb45250ca0f4d128 *src/lightauc.cpp
+0f6bcf55fa0673c5427bedcd3a0e3a80 *src/lightauc.cpp
 e8da9f18e5c9b728067830b9de429a0a *tests/testthat.R
 4c205d1691826f72db2413d592a6d513 *tests/testthat/test-lightAUC.r
 1808e2f497476fcacfdbd765c494351f *vignettes/Introduction.Rmd
